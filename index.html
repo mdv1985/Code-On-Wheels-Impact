@@ -1,34 +1,41 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Impact — Code on Wheels</title>
-  <meta name="description" content="Explore Code on Wheels' 2023–2025 student demographic and impact data." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <meta name="description" content="Explore Code on Wheels' 2023–2025 student demographic and impact data."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+    #root{min-height:100vh}
   </style>
 </head>
 <body>
   <div id="root"></div>
 
-  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
-  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
-  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.15.0/Recharts.min.js"></script>
-  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.4/babel.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@18.3.1",
+      "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+      "recharts": "https://esm.sh/recharts@2.15.0?external=react,react-dom"
+    }
+  }
+  </script>
 
-  <script type="text/babel">
-    const { useState } = React;
-    const {
+  <script type="module">
+    import React, { useState, createElement as h } from "react";
+    import { createRoot } from "react-dom/client";
+    import {
       BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
       PieChart, Pie, Cell, Legend,
       AreaChart, Area, CartesianGrid,
-    } = Recharts;
+    } from "recharts";
 
-    // ─── REAL DATA ───────────────────────────────────────────────────────
+    // ─── DATA ────────────────────────────────────────────────────────────
     const YEARS = [2023, 2024, 2025];
     const totalServed = { 2023: 77, 2024: 143, 2025: 197 };
 
@@ -84,266 +91,285 @@
       ],
     };
 
-    // ─── Colors ──────────────────────────────────────────────────────────
+    // ─── COLORS ──────────────────────────────────────────────────────────
     const C = {
-      navy: "#0B1D3A", teal: "#00C9A7", coral: "#FF6B6B", gold: "#FFD166",
-      sky: "#4ECDC4", lavender: "#A78BFA", offWhite: "#F7F8FA", cardBg: "#FFFFFF",
-      muted: "#94A3B8", text: "#1E293B",
+      navy:"#0B1D3A", teal:"#00C9A7", coral:"#FF6B6B", gold:"#FFD166",
+      sky:"#4ECDC4", lavender:"#A78BFA", offWhite:"#F7F8FA", cardBg:"#FFFFFF",
+      muted:"#94A3B8", text:"#1E293B",
     };
     const ETH_C = ["#00C9A7","#FF6B6B","#FFD166","#4ECDC4","#A78BFA","#F97316","#94A3B8"];
     const GEN_C = ["#4ECDC4","#FF6B6B","#FFD166","#A78BFA"];
     const SCH_C = ["#FFD166","#00C9A7","#4ECDC4","#94A3B8"];
+    const shadow = "0 1px 3px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.04)";
 
     const sumG = (y) => Object.values(genderData[y]).reduce((a,b)=>a+b,0);
     const femPct = (y) => Math.round((genderData[y].Female/sumG(y))*100);
 
-    // ─── Shared Components ───────────────────────────────────────────────
-    const shadow = "0 1px 3px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.04)";
-
-    const CTooltip = ({ active, payload, label }) => {
+    // ─── CUSTOM TOOLTIP ──────────────────────────────────────────────────
+    function CTooltip({ active, payload, label }) {
       if (!active || !payload?.length) return null;
-      return (
-        <div style={{ background: C.navy, color: "#fff", padding: "10px 14px", borderRadius: 8, fontSize: 13, lineHeight: 1.6, boxShadow: "0 4px 20px rgba(0,0,0,.25)" }}>
-          {label && <div style={{ fontWeight: 700, marginBottom: 4 }}>{label}</div>}
-          {payload.map((p,i) => (
-            <div key={i} style={{ display:"flex", gap:8, alignItems:"center" }}>
-              <span style={{ width:8,height:8,borderRadius:"50%",background:p.color||p.fill,flexShrink:0 }}/>
-              <span>{p.name}: <strong>{p.value}</strong></span>
-            </div>
-          ))}
-        </div>
-      );
-    };
-
-    const StatCard = ({ number, label, accent=C.teal, sub }) => (
-      <div style={{ background:C.cardBg, borderRadius:16, padding:"28px 24px", textAlign:"center", boxShadow:shadow, borderTop:`4px solid ${accent}`, flex:"1 1 180px", minWidth:160 }}>
-        <div style={{ fontSize:44, fontWeight:800, color:accent, fontFamily:"'Bricolage Grotesque',sans-serif", lineHeight:1.1 }}>{number}</div>
-        <div style={{ fontSize:14, color:C.text, fontWeight:600, marginTop:6 }}>{label}</div>
-        {sub && <div style={{ fontSize:12, color:C.muted, marginTop:4 }}>{sub}</div>}
-      </div>
-    );
-
-    const Section = ({ title, subtitle, children }) => (
-      <section style={{ marginBottom:56 }}>
-        <div style={{ marginBottom:24 }}>
-          <h2 style={{ fontSize:28, fontWeight:800, color:C.navy, margin:0, fontFamily:"'Bricolage Grotesque',sans-serif" }}>{title}</h2>
-          {subtitle && <p style={{ fontSize:15, color:C.muted, margin:"6px 0 0", maxWidth:620 }}>{subtitle}</p>}
-        </div>
-        {children}
-      </section>
-    );
-
-    const YearSelector = ({ year, setYear }) => (
-      <div style={{ display:"inline-flex", background:"#E2E8F0", borderRadius:999, padding:3, gap:2 }}>
-        {YEARS.map(y=>(
-          <button key={y} onClick={()=>setYear(y)} style={{ padding:"7px 20px", borderRadius:999, border:"none", cursor:"pointer", fontWeight:700, fontSize:14, fontFamily:"'DM Sans',sans-serif", transition:"all .2s", background:year===y?C.navy:"transparent", color:year===y?"#fff":C.text }}>{y}</button>
-        ))}
-      </div>
-    );
-
-    // ─── Charts ──────────────────────────────────────────────────────────
-    const GrowthTrend = () => {
-      const data = YEARS.map(y=>({ year:y.toString(), Students:totalServed[y] }));
-      return (
-        <div style={{ background:C.cardBg, borderRadius:16, padding:24, boxShadow:shadow }}>
-          <h3 style={{ margin:"0 0 16px", fontSize:16, fontWeight:700, color:C.text }}>Total Students Served Per Year</h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={data}>
-              <defs><linearGradient id="gT" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.teal} stopOpacity={0.35}/><stop offset="100%" stopColor={C.teal} stopOpacity={0.02}/></linearGradient></defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0"/>
-              <XAxis dataKey="year" tick={{ fontSize:13, fill:C.muted }}/>
-              <YAxis tick={{ fontSize:13, fill:C.muted }}/>
-              <Tooltip content={<CTooltip/>}/>
-              <Area type="monotone" dataKey="Students" stroke={C.teal} strokeWidth={3} fill="url(#gT)" dot={{ r:6, fill:C.teal, stroke:"#fff", strokeWidth:2 }}/>
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      );
-    };
-
-    const GenderBreakdown = ({ year }) => {
-      const d = genderData[year];
-      const total = sumG(year);
-      const pieData = Object.entries(d).map(([k,v])=>({ name:k, value:v }));
-      return (
-        <div style={{ background:C.cardBg, borderRadius:16, padding:24, boxShadow:shadow }}>
-          <h3 style={{ margin:"0 0 4px", fontSize:16, fontWeight:700, color:C.text }}>Gender Breakdown</h3>
-          <p style={{ margin:"0 0 12px", fontSize:13, color:C.muted }}>{total} students in {year}</p>
-          <ResponsiveContainer width="100%" height={230}>
-            <PieChart>
-              <Pie data={pieData} cx="50%" cy="50%" innerRadius={52} outerRadius={88} paddingAngle={3} dataKey="value" strokeWidth={0}>
-                {pieData.map((_,i)=>(<Cell key={i} fill={GEN_C[i%GEN_C.length]}/>))}
-              </Pie>
-              <Tooltip content={<CTooltip/>}/>
-              <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize:13, fontFamily:"'DM Sans',sans-serif" }}/>
-            </PieChart>
-          </ResponsiveContainer>
-          <div style={{ display:"flex", justifyContent:"center", gap:20, marginTop:8, flexWrap:"wrap" }}>
-            {pieData.map((p,i)=>(
-              <div key={i} style={{ textAlign:"center" }}>
-                <div style={{ fontSize:20, fontWeight:800, color:GEN_C[i%GEN_C.length] }}>{Math.round((p.value/total)*100)}%</div>
-                <div style={{ fontSize:11, color:C.muted }}>{p.name}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    };
-
-    const EthnicityChart = ({ year }) => (
-      <div style={{ background:C.cardBg, borderRadius:16, padding:24, boxShadow:shadow }}>
-        <h3 style={{ margin:"0 0 4px", fontSize:16, fontWeight:700, color:C.text }}>Ethnicity Distribution</h3>
-        <p style={{ margin:"0 0 12px", fontSize:13, color:C.muted }}>Serving diverse communities in Grand Rapids</p>
-        <ResponsiveContainer width="100%" height={Math.max(220, ethnicityData[year].length*44)}>
-          <BarChart data={ethnicityData[year]} layout="vertical" margin={{ left:10 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" horizontal={false}/>
-            <XAxis type="number" tick={{ fontSize:12, fill:C.muted }}/>
-            <YAxis dataKey="name" type="category" width={175} tick={{ fontSize:12, fill:C.text }}/>
-            <Tooltip content={<CTooltip/>}/>
-            <Bar dataKey="value" name="Students" radius={[0,6,6,0]} barSize={20}>
-              {ethnicityData[year].map((_,i)=>(<Cell key={i} fill={ETH_C[i%ETH_C.length]}/>))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    );
-
-    const SchoolLevelChart = ({ year }) => (
-      <div style={{ background:C.cardBg, borderRadius:16, padding:24, boxShadow:shadow }}>
-        <h3 style={{ margin:"0 0 4px", fontSize:16, fontWeight:700, color:C.text }}>Students by School Level</h3>
-        <p style={{ margin:"0 0 12px", fontSize:13, color:C.muted }}>Programs tailored for every age group</p>
-        <ResponsiveContainer width="100%" height={240}>
-          <BarChart data={schoolData[year]}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0"/>
-            <XAxis dataKey="group" tick={{ fontSize:12, fill:C.muted }}/>
-            <YAxis tick={{ fontSize:12, fill:C.muted }}/>
-            <Tooltip content={<CTooltip/>}/>
-            <Bar dataKey="count" name="Students" radius={[6,6,0,0]} barSize={48}>
-              {schoolData[year].map((_,i)=>(<Cell key={i} fill={SCH_C[i%SCH_C.length]}/>))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    );
-
-    const GenderByYear = () => {
-      const data = YEARS.map(y=>{
-        const d = genderData[y];
-        return { year:y.toString(), Male:d.Male, Female:d.Female, "Non-Binary / Other":(d["Non-Binary"]||0)+(d.Other||0) };
-      });
-      return (
-        <div style={{ background:C.cardBg, borderRadius:16, padding:24, boxShadow:shadow }}>
-          <h3 style={{ margin:"0 0 4px", fontSize:16, fontWeight:700, color:C.text }}>Gender Breakdown by Year</h3>
-          <p style={{ margin:"0 0 12px", fontSize:13, color:C.muted }}>Stacked comparison across all years</p>
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0"/>
-              <XAxis dataKey="year" tick={{ fontSize:13, fill:C.muted }}/>
-              <YAxis tick={{ fontSize:13, fill:C.muted }}/>
-              <Tooltip content={<CTooltip/>}/>
-              <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize:13 }}/>
-              <Bar dataKey="Male" stackId="a" fill={GEN_C[0]}/>
-              <Bar dataKey="Female" stackId="a" fill={GEN_C[1]}/>
-              <Bar dataKey="Non-Binary / Other" stackId="a" fill={GEN_C[2]} radius={[6,6,0,0]} barSize={56}/>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      );
-    };
-
-    const EthnicityTrend = () => {
-      const cats = ["Hispanic","Black","White","Multiracial","Asian","Other"];
-      const data = YEARS.map(y=>{
-        const row = { year:y.toString() };
-        cats.forEach(cat=>{
-          const match = ethnicityData[y].find(e=>e.name.toLowerCase().startsWith(cat.toLowerCase()));
-          row[cat] = match ? match.value : 0;
-        });
-        if(y===2025){ const ai=ethnicityData[y].find(e=>e.name.includes("Indian")); if(ai) row["Other"]+=ai.value; }
-        return row;
-      });
-      return (
-        <div style={{ background:C.cardBg, borderRadius:16, padding:24, boxShadow:shadow }}>
-          <h3 style={{ margin:"0 0 4px", fontSize:16, fontWeight:700, color:C.text }}>Ethnicity Trends Over Time</h3>
-          <p style={{ margin:"0 0 12px", fontSize:13, color:C.muted }}>How the student population has diversified year over year</p>
-          <ResponsiveContainer width="100%" height={280}>
-            <AreaChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0"/>
-              <XAxis dataKey="year" tick={{ fontSize:13, fill:C.muted }}/>
-              <YAxis tick={{ fontSize:13, fill:C.muted }}/>
-              <Tooltip content={<CTooltip/>}/>
-              <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize:12 }}/>
-              {cats.map((cat,i)=>(<Area key={cat} type="monotone" dataKey={cat} stackId="1" stroke={ETH_C[i]} fill={ETH_C[i]} fillOpacity={0.7}/>))}
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      );
-    };
-
-    // ─── Main App ────────────────────────────────────────────────────────
-    function App() {
-      const [year, setYear] = useState(2025);
-      const cumulative = totalServed[2023]+totalServed[2024]+totalServed[2025];
-      const growth = Math.round(((totalServed[2025]-totalServed[2023])/totalServed[2023])*100);
-
-      return (
-        <div style={{ minHeight:"100vh", background:C.offWhite, fontFamily:"'DM Sans',sans-serif", color:C.text }}>
-
-          <header style={{ background:`linear-gradient(135deg, ${C.navy} 0%, #163060 60%, ${C.teal} 150%)`, color:"#fff", padding:"56px 24px 48px", textAlign:"center", position:"relative", overflow:"hidden" }}>
-            <div style={{ position:"absolute", width:320, height:320, borderRadius:"50%", background:C.teal, opacity:0.07, top:-80, right:-60 }}/>
-            <div style={{ position:"absolute", width:200, height:200, borderRadius:"50%", background:C.coral, opacity:0.06, bottom:-60, left:-40 }}/>
-            <p style={{ fontSize:13, fontWeight:600, letterSpacing:3, textTransform:"uppercase", color:C.teal, margin:"0 0 12px" }}>Code on Wheels</p>
-            <h1 style={{ fontSize:"clamp(32px, 5vw, 52px)", fontWeight:800, margin:"0 0 12px", fontFamily:"'Bricolage Grotesque',sans-serif", lineHeight:1.15 }}>Our Impact</h1>
-            <p style={{ fontSize:17, opacity:0.8, maxWidth:560, margin:"0 auto", lineHeight:1.6 }}>Bridging the diversity gap in tech — one student at a time.<br/>Explore our 2023–2025 student demographic data.</p>
-          </header>
-
-          <main style={{ maxWidth:1080, margin:"0 auto", padding:"40px 20px 80px" }}>
-
-            <Section title="At a Glance" subtitle="Key metrics from three years of programming.">
-              <div style={{ display:"flex", flexWrap:"wrap", gap:16 }}>
-                <StatCard number={cumulative} label="Total Students Served" accent={C.teal} sub="2023 – 2025"/>
-                <StatCard number={`${growth}%`} label="Growth (2023 → 2025)" accent={C.coral}/>
-                <StatCard number={`${femPct(2025)}%`} label="Female (2025)" accent={C.lavender}/>
-                <StatCard number={totalServed[2025]} label="Students in 2025" accent={C.gold} sub="Our biggest year yet"/>
-              </div>
-            </Section>
-
-            <Section title="Growth Over Time" subtitle="Students served has more than doubled since our first year.">
-              <GrowthTrend/>
-            </Section>
-
-            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:12, marginBottom:32 }}>
-              <h2 style={{ fontSize:28, fontWeight:800, color:C.navy, margin:0, fontFamily:"'Bricolage Grotesque',sans-serif" }}>Detailed Demographics</h2>
-              <YearSelector year={year} setYear={setYear}/>
-            </div>
-
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(340px, 1fr))", gap:20, marginBottom:40 }}>
-              <GenderBreakdown year={year}/>
-              <EthnicityChart year={year}/>
-            </div>
-
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(340px, 1fr))", gap:20, marginBottom:40 }}>
-              <SchoolLevelChart year={year}/>
-              <GenderByYear/>
-            </div>
-
-            <Section title="Diversity Over Time" subtitle="The share of Hispanic and Black students has grown significantly, reflecting deeper community reach.">
-              <EthnicityTrend/>
-            </Section>
-
-            <div style={{ background:`linear-gradient(135deg, ${C.navy}, #1a3a6a)`, borderRadius:20, padding:"40px 32px", color:"#fff", textAlign:"center", marginTop:16, position:"relative", overflow:"hidden" }}>
-              <div style={{ position:"absolute", width:180, height:180, borderRadius:"50%", background:C.teal, opacity:0.08, top:-40, left:-40 }}/>
-              <p style={{ fontSize:22, fontStyle:"italic", lineHeight:1.6, maxWidth:640, margin:"0 auto 16px", fontFamily:"'Bricolage Grotesque',sans-serif" }}>
-                "I really liked how I got to learn more about something that I've been interested in, coding! I learned a lot and I will definitely continue my game on my own."
-              </p>
-              <span style={{ fontSize:14, opacity:0.65 }}>— CoW Participant</span>
-            </div>
-          </main>
-        </div>
+      return h("div", { style: { background:C.navy, color:"#fff", padding:"10px 14px", borderRadius:8, fontSize:13, lineHeight:1.6, boxShadow:"0 4px 20px rgba(0,0,0,.25)" } },
+        label && h("div", { style: { fontWeight:700, marginBottom:4 } }, label),
+        payload.map((p,i) =>
+          h("div", { key:i, style:{ display:"flex", gap:8, alignItems:"center" } },
+            h("span", { style:{ width:8, height:8, borderRadius:"50%", background:p.color||p.fill, flexShrink:0 } }),
+            h("span", null, p.name, ": ", h("strong", null, p.value))
+          )
+        )
       );
     }
 
-    ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+    // ─── STAT CARD ───────────────────────────────────────────────────────
+    function StatCard({ number, label, accent=C.teal, sub }) {
+      return h("div", { style:{ background:C.cardBg, borderRadius:16, padding:"28px 24px", textAlign:"center", boxShadow:shadow, borderTop:`4px solid ${accent}`, flex:"1 1 180px", minWidth:160 } },
+        h("div", { style:{ fontSize:44, fontWeight:800, color:accent, fontFamily:"'Bricolage Grotesque',sans-serif", lineHeight:1.1 } }, number),
+        h("div", { style:{ fontSize:14, color:C.text, fontWeight:600, marginTop:6 } }, label),
+        sub && h("div", { style:{ fontSize:12, color:C.muted, marginTop:4 } }, sub)
+      );
+    }
+
+    // ─── SECTION ─────────────────────────────────────────────────────────
+    function Section({ title, subtitle, children }) {
+      return h("section", { style:{ marginBottom:56 } },
+        h("div", { style:{ marginBottom:24 } },
+          h("h2", { style:{ fontSize:28, fontWeight:800, color:C.navy, margin:0, fontFamily:"'Bricolage Grotesque',sans-serif" } }, title),
+          subtitle && h("p", { style:{ fontSize:15, color:C.muted, margin:"6px 0 0", maxWidth:620 } }, subtitle)
+        ),
+        children
+      );
+    }
+
+    // ─── YEAR SELECTOR ───────────────────────────────────────────────────
+    function YearSelector({ year, setYear }) {
+      return h("div", { style:{ display:"inline-flex", background:"#E2E8F0", borderRadius:999, padding:3, gap:2 } },
+        YEARS.map(y =>
+          h("button", {
+            key:y, onClick:()=>setYear(y),
+            style:{ padding:"7px 20px", borderRadius:999, border:"none", cursor:"pointer", fontWeight:700, fontSize:14, fontFamily:"'DM Sans',sans-serif", transition:"all .2s", background:year===y?C.navy:"transparent", color:year===y?"#fff":C.text }
+          }, y)
+        )
+      );
+    }
+
+    // ─── GROWTH TREND ────────────────────────────────────────────────────
+    function GrowthTrend() {
+      const data = YEARS.map(y => ({ year: y.toString(), Students: totalServed[y] }));
+      return h("div", { style:{ background:C.cardBg, borderRadius:16, padding:24, boxShadow:shadow } },
+        h("h3", { style:{ margin:"0 0 16px", fontSize:16, fontWeight:700, color:C.text } }, "Total Students Served Per Year"),
+        h(ResponsiveContainer, { width:"100%", height:220 },
+          h(AreaChart, { data },
+            h("defs", null,
+              h("linearGradient", { id:"gT", x1:"0", y1:"0", x2:"0", y2:"1" },
+                h("stop", { offset:"0%", stopColor:C.teal, stopOpacity:0.35 }),
+                h("stop", { offset:"100%", stopColor:C.teal, stopOpacity:0.02 })
+              )
+            ),
+            h(CartesianGrid, { strokeDasharray:"3 3", stroke:"#E2E8F0" }),
+            h(XAxis, { dataKey:"year", tick:{ fontSize:13, fill:C.muted } }),
+            h(YAxis, { tick:{ fontSize:13, fill:C.muted } }),
+            h(Tooltip, { content: h(CTooltip) }),
+            h(Area, { type:"monotone", dataKey:"Students", stroke:C.teal, strokeWidth:3, fill:"url(#gT)", dot:{ r:6, fill:C.teal, stroke:"#fff", strokeWidth:2 } })
+          )
+        )
+      );
+    }
+
+    // ─── GENDER BREAKDOWN ────────────────────────────────────────────────
+    function GenderBreakdown({ year }) {
+      const d = genderData[year];
+      const total = sumG(year);
+      const pieData = Object.entries(d).map(([k,v]) => ({ name:k, value:v }));
+      return h("div", { style:{ background:C.cardBg, borderRadius:16, padding:24, boxShadow:shadow } },
+        h("h3", { style:{ margin:"0 0 4px", fontSize:16, fontWeight:700, color:C.text } }, "Gender Breakdown"),
+        h("p", { style:{ margin:"0 0 12px", fontSize:13, color:C.muted } }, `${total} students in ${year}`),
+        h(ResponsiveContainer, { width:"100%", height:230 },
+          h(PieChart, null,
+            h(Pie, { data:pieData, cx:"50%", cy:"50%", innerRadius:52, outerRadius:88, paddingAngle:3, dataKey:"value", strokeWidth:0 },
+              pieData.map((_,i) => h(Cell, { key:i, fill:GEN_C[i%GEN_C.length] }))
+            ),
+            h(Tooltip, { content: h(CTooltip) }),
+            h(Legend, { iconType:"circle", iconSize:8, wrapperStyle:{ fontSize:13, fontFamily:"'DM Sans',sans-serif" } })
+          )
+        ),
+        h("div", { style:{ display:"flex", justifyContent:"center", gap:20, marginTop:8, flexWrap:"wrap" } },
+          pieData.map((p,i) =>
+            h("div", { key:i, style:{ textAlign:"center" } },
+              h("div", { style:{ fontSize:20, fontWeight:800, color:GEN_C[i%GEN_C.length] } }, `${Math.round((p.value/total)*100)}%`),
+              h("div", { style:{ fontSize:11, color:C.muted } }, p.name)
+            )
+          )
+        )
+      );
+    }
+
+    // ─── ETHNICITY CHART ─────────────────────────────────────────────────
+    function EthnicityChart({ year }) {
+      return h("div", { style:{ background:C.cardBg, borderRadius:16, padding:24, boxShadow:shadow } },
+        h("h3", { style:{ margin:"0 0 4px", fontSize:16, fontWeight:700, color:C.text } }, "Ethnicity Distribution"),
+        h("p", { style:{ margin:"0 0 12px", fontSize:13, color:C.muted } }, "Serving diverse communities in Grand Rapids"),
+        h(ResponsiveContainer, { width:"100%", height:Math.max(220, ethnicityData[year].length*44) },
+          h(BarChart, { data:ethnicityData[year], layout:"vertical", margin:{ left:10 } },
+            h(CartesianGrid, { strokeDasharray:"3 3", stroke:"#E2E8F0", horizontal:false }),
+            h(XAxis, { type:"number", tick:{ fontSize:12, fill:C.muted } }),
+            h(YAxis, { dataKey:"name", type:"category", width:175, tick:{ fontSize:12, fill:C.text } }),
+            h(Tooltip, { content: h(CTooltip) }),
+            h(Bar, { dataKey:"value", name:"Students", radius:[0,6,6,0], barSize:20 },
+              ethnicityData[year].map((_,i) => h(Cell, { key:i, fill:ETH_C[i%ETH_C.length] }))
+            )
+          )
+        )
+      );
+    }
+
+    // ─── SCHOOL LEVEL CHART ──────────────────────────────────────────────
+    function SchoolLevelChart({ year }) {
+      return h("div", { style:{ background:C.cardBg, borderRadius:16, padding:24, boxShadow:shadow } },
+        h("h3", { style:{ margin:"0 0 4px", fontSize:16, fontWeight:700, color:C.text } }, "Students by School Level"),
+        h("p", { style:{ margin:"0 0 12px", fontSize:13, color:C.muted } }, "Programs tailored for every age group"),
+        h(ResponsiveContainer, { width:"100%", height:240 },
+          h(BarChart, { data:schoolData[year] },
+            h(CartesianGrid, { strokeDasharray:"3 3", stroke:"#E2E8F0" }),
+            h(XAxis, { dataKey:"group", tick:{ fontSize:12, fill:C.muted } }),
+            h(YAxis, { tick:{ fontSize:12, fill:C.muted } }),
+            h(Tooltip, { content: h(CTooltip) }),
+            h(Bar, { dataKey:"count", name:"Students", radius:[6,6,0,0], barSize:48 },
+              schoolData[year].map((_,i) => h(Cell, { key:i, fill:SCH_C[i%SCH_C.length] }))
+            )
+          )
+        )
+      );
+    }
+
+    // ─── GENDER BY YEAR ──────────────────────────────────────────────────
+    function GenderByYear() {
+      const data = YEARS.map(y => {
+        const d = genderData[y];
+        return { year:y.toString(), Male:d.Male, Female:d.Female, "Non-Binary / Other":(d["Non-Binary"]||0)+(d.Other||0) };
+      });
+      return h("div", { style:{ background:C.cardBg, borderRadius:16, padding:24, boxShadow:shadow } },
+        h("h3", { style:{ margin:"0 0 4px", fontSize:16, fontWeight:700, color:C.text } }, "Gender Breakdown by Year"),
+        h("p", { style:{ margin:"0 0 12px", fontSize:13, color:C.muted } }, "Stacked comparison across all years"),
+        h(ResponsiveContainer, { width:"100%", height:240 },
+          h(BarChart, { data },
+            h(CartesianGrid, { strokeDasharray:"3 3", stroke:"#E2E8F0" }),
+            h(XAxis, { dataKey:"year", tick:{ fontSize:13, fill:C.muted } }),
+            h(YAxis, { tick:{ fontSize:13, fill:C.muted } }),
+            h(Tooltip, { content: h(CTooltip) }),
+            h(Legend, { iconType:"circle", iconSize:8, wrapperStyle:{ fontSize:13 } }),
+            h(Bar, { dataKey:"Male", stackId:"a", fill:GEN_C[0] }),
+            h(Bar, { dataKey:"Female", stackId:"a", fill:GEN_C[1] }),
+            h(Bar, { dataKey:"Non-Binary / Other", stackId:"a", fill:GEN_C[2], radius:[6,6,0,0], barSize:56 })
+          )
+        )
+      );
+    }
+
+    // ─── ETHNICITY TREND ─────────────────────────────────────────────────
+    function EthnicityTrend() {
+      const cats = ["Hispanic","Black","White","Multiracial","Asian","Other"];
+      const data = YEARS.map(y => {
+        const row = { year:y.toString() };
+        cats.forEach(cat => {
+          const match = ethnicityData[y].find(e => e.name.toLowerCase().startsWith(cat.toLowerCase()));
+          row[cat] = match ? match.value : 0;
+        });
+        if (y === 2025) {
+          const ai = ethnicityData[y].find(e => e.name.includes("Indian"));
+          if (ai) row["Other"] += ai.value;
+        }
+        return row;
+      });
+      return h("div", { style:{ background:C.cardBg, borderRadius:16, padding:24, boxShadow:shadow } },
+        h("h3", { style:{ margin:"0 0 4px", fontSize:16, fontWeight:700, color:C.text } }, "Ethnicity Trends Over Time"),
+        h("p", { style:{ margin:"0 0 12px", fontSize:13, color:C.muted } }, "How the student population has diversified year over year"),
+        h(ResponsiveContainer, { width:"100%", height:280 },
+          h(AreaChart, { data },
+            h(CartesianGrid, { strokeDasharray:"3 3", stroke:"#E2E8F0" }),
+            h(XAxis, { dataKey:"year", tick:{ fontSize:13, fill:C.muted } }),
+            h(YAxis, { tick:{ fontSize:13, fill:C.muted } }),
+            h(Tooltip, { content: h(CTooltip) }),
+            h(Legend, { iconType:"circle", iconSize:8, wrapperStyle:{ fontSize:12 } }),
+            ...cats.map((cat,i) =>
+              h(Area, { key:cat, type:"monotone", dataKey:cat, stackId:"1", stroke:ETH_C[i], fill:ETH_C[i], fillOpacity:0.7 })
+            )
+          )
+        )
+      );
+    }
+
+    // ─── MAIN APP ────────────────────────────────────────────────────────
+    function App() {
+      const [year, setYear] = useState(2025);
+      const cumulative = totalServed[2023] + totalServed[2024] + totalServed[2025];
+      const growth = Math.round(((totalServed[2025] - totalServed[2023]) / totalServed[2023]) * 100);
+
+      return h("div", { style:{ minHeight:"100vh", background:C.offWhite, fontFamily:"'DM Sans',sans-serif", color:C.text } },
+
+        // ── HERO ──
+        h("header", { style:{ background:`linear-gradient(135deg, ${C.navy} 0%, #163060 60%, ${C.teal} 150%)`, color:"#fff", padding:"56px 24px 48px", textAlign:"center", position:"relative", overflow:"hidden" } },
+          h("div", { style:{ position:"absolute", width:320, height:320, borderRadius:"50%", background:C.teal, opacity:0.07, top:-80, right:-60 } }),
+          h("div", { style:{ position:"absolute", width:200, height:200, borderRadius:"50%", background:C.coral, opacity:0.06, bottom:-60, left:-40 } }),
+          h("p", { style:{ fontSize:13, fontWeight:600, letterSpacing:3, textTransform:"uppercase", color:C.teal, margin:"0 0 12px" } }, "Code on Wheels"),
+          h("h1", { style:{ fontSize:"clamp(32px, 5vw, 52px)", fontWeight:800, margin:"0 0 12px", fontFamily:"'Bricolage Grotesque',sans-serif", lineHeight:1.15 } }, "Our Impact"),
+          h("p", { style:{ fontSize:17, opacity:0.8, maxWidth:560, margin:"0 auto", lineHeight:1.6 } },
+            "Bridging the diversity gap in tech — one student at a time.", h("br"), "Explore our 2023–2025 student demographic data."
+          )
+        ),
+
+        // ── MAIN ──
+        h("main", { style:{ maxWidth:1080, margin:"0 auto", padding:"40px 20px 80px" } },
+
+          // KPIs
+          h(Section, { title:"At a Glance", subtitle:"Key metrics from three years of programming." },
+            h("div", { style:{ display:"flex", flexWrap:"wrap", gap:16 } },
+              h(StatCard, { number:cumulative, label:"Total Students Served", accent:C.teal, sub:"2023 – 2025" }),
+              h(StatCard, { number:`${growth}%`, label:"Growth (2023 → 2025)", accent:C.coral }),
+              h(StatCard, { number:`${femPct(2025)}%`, label:"Female (2025)", accent:C.lavender }),
+              h(StatCard, { number:totalServed[2025], label:"Students in 2025", accent:C.gold, sub:"Our biggest year yet" })
+            )
+          ),
+
+          // Growth
+          h(Section, { title:"Growth Over Time", subtitle:"Students served has more than doubled since our first year." },
+            h(GrowthTrend)
+          ),
+
+          // Year toggle header
+          h("div", { style:{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:12, marginBottom:32 } },
+            h("h2", { style:{ fontSize:28, fontWeight:800, color:C.navy, margin:0, fontFamily:"'Bricolage Grotesque',sans-serif" } }, "Detailed Demographics"),
+            h(YearSelector, { year, setYear })
+          ),
+
+          // Gender + Ethnicity
+          h("div", { style:{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(340px, 1fr))", gap:20, marginBottom:40 } },
+            h(GenderBreakdown, { year }),
+            h(EthnicityChart, { year })
+          ),
+
+          // School Level + Gender by Year
+          h("div", { style:{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(340px, 1fr))", gap:20, marginBottom:40 } },
+            h(SchoolLevelChart, { year }),
+            h(GenderByYear)
+          ),
+
+          // Ethnicity Trend
+          h(Section, { title:"Diversity Over Time", subtitle:"The share of Hispanic and Black students has grown significantly, reflecting deeper community reach." },
+            h(EthnicityTrend)
+          ),
+
+          // Quote
+          h("div", { style:{ background:`linear-gradient(135deg, ${C.navy}, #1a3a6a)`, borderRadius:20, padding:"40px 32px", color:"#fff", textAlign:"center", marginTop:16, position:"relative", overflow:"hidden" } },
+            h("div", { style:{ position:"absolute", width:180, height:180, borderRadius:"50%", background:C.teal, opacity:0.08, top:-40, left:-40 } }),
+            h("p", { style:{ fontSize:22, fontStyle:"italic", lineHeight:1.6, maxWidth:640, margin:"0 auto 16px", fontFamily:"'Bricolage Grotesque',sans-serif" } },
+              "\"I really liked how I got to learn more about something that I've been interested in, coding! I learned a lot and I will definitely continue my game on my own.\""
+            ),
+            h("span", { style:{ fontSize:14, opacity:0.65 } }, "— CoW Participant")
+          )
+        )
+      );
+    }
+
+    createRoot(document.getElementById("root")).render(h(App));
   </script>
 </body>
 </html>
